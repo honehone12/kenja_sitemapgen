@@ -10,12 +10,16 @@ use tokio::{fs, io::AsyncWriteExt};
 use tracing::info;
 use url::form_urlencoded;
 
-const F: &'static str = "\
-<url>
-    <loc>%LOC%</loc>
-    <lastmod>%LASTMOD%</lastmod>
-</url>
+const HEAD: &'static str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">"#;
+const FOOT: &'static str = "
+</urlset>
 ";
+const F: &'static str = "
+    <url>
+        <loc>%LOC%</loc>
+        <lastmod>%LASTMOD%</lastmod>
+    </url>";
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FlatDocument {
@@ -52,6 +56,7 @@ async fn main() -> anyhow::Result<()> {
         .append(true)
         .open("vectorsearch.xml")
         .await?;
+
     let mut sitemap_vec_jp = fs::File::options()
         .create(true)
         .append(true)
@@ -67,6 +72,11 @@ async fn main() -> anyhow::Result<()> {
         .append(true)
         .open("textsearch_jp.xml")
         .await?;
+
+    sitemap_vec.write(HEAD.as_bytes()).await?;
+    sitemap_vec_jp.write(HEAD.as_bytes()).await?;
+    sitemap_txt.write(HEAD.as_bytes()).await?;
+    sitemap_txt_jp.write(HEAD.as_bytes()).await?;
 
     let mut gen_map = HashMap::new();
 
@@ -121,6 +131,11 @@ async fn main() -> anyhow::Result<()> {
             }
         };
     }
+
+    sitemap_vec.write(FOOT.as_bytes()).await?;
+    sitemap_vec_jp.write(FOOT.as_bytes()).await?;
+    sitemap_txt.write(FOOT.as_bytes()).await?;
+    sitemap_txt_jp.write(FOOT.as_bytes()).await?;
 
     sitemap_vec.flush().await?;
     sitemap_vec_jp.flush().await?;
