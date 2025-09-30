@@ -61,16 +61,6 @@ async fn main() -> anyhow::Result<()> {
         .append(true)
         .open("vectorsearch_jp.xml")
         .await?;
-    let mut sitemap_txt = fs::File::options()
-        .create(true)
-        .append(true)
-        .open("textsearch.xml")
-        .await?;
-    let mut sitemap_txt_jp = fs::File::options()
-        .create(true)
-        .append(true)
-        .open("textsearch_jp.xml")
-        .await?;
     let mut sitemap_vec_2 = fs::File::options()
         .create(true)
         .append(true)
@@ -81,26 +71,23 @@ async fn main() -> anyhow::Result<()> {
         .append(true)
         .open("vectorsearch_jp_2.xml")
         .await?;
-    let mut sitemap_txt_2 = fs::File::options()
+
+    let mut sitemap_txt = fs::File::options()
         .create(true)
         .append(true)
-        .open("textsearch_2.xml")
-        .await?;
-    let mut sitemap_txt_jp_2 = fs::File::options()
-        .create(true)
-        .append(true)
-        .open("textsearch_jp_2.xml")
+        .open("textsearch.xml")
         .await?;
 
     sitemap_vec.write(HEAD.as_bytes()).await?;
+    let mut v = 0;
     sitemap_vec_jp.write(HEAD.as_bytes()).await?;
-    sitemap_txt.write(HEAD.as_bytes()).await?;
-    sitemap_txt_jp.write(HEAD.as_bytes()).await?;
-
+    let mut vjp = 0;
     sitemap_vec_2.write(HEAD.as_bytes()).await?;
+    let mut v2 = 0;
     sitemap_vec_jp_2.write(HEAD.as_bytes()).await?;
-    sitemap_txt_2.write(HEAD.as_bytes()).await?;
-    sitemap_txt_jp_2.write(HEAD.as_bytes()).await?;
+    let mut vjp2 = 0;
+    sitemap_txt.write(HEAD.as_bytes()).await?;
+    let mut t = 0;
 
     let mut gen_map = HashMap::new();
     let mut next = 0;
@@ -126,16 +113,25 @@ async fn main() -> anyhow::Result<()> {
             match next {
                 0 => {
                     sitemap_vec.write(xml.as_bytes()).await?;
+                    v += 1;
                     sitemap_vec_jp.write(xml_jp.as_bytes()).await?;
+                    vjp += 1;
                 }
                 1 => {
                     sitemap_vec_2.write(xml.as_bytes()).await?;
+                    v2 += 1;
                     sitemap_vec_jp_2.write(xml_jp.as_bytes()).await?;
+                    vjp2 += 1;
                 }
                 _ => bail!("next is unexpected value"),
             }
 
             gen_map.insert(doc.id.to_hex(), true);
+            next = (next + 1) % 2;
+        }
+
+        if doc.item_type == 2 {
+            continue;
         }
 
         if let Some(name) = doc.name {
@@ -146,11 +142,8 @@ async fn main() -> anyhow::Result<()> {
                 let url = format!("{base_url_txt}?{}", q.finish());
                 let xml = f.replace("%LOC%", &url.replace('&', "&amp;"));
 
-                match next {
-                    0 => sitemap_txt.write(xml.as_bytes()).await?,
-                    1 => sitemap_txt_2.write(xml.as_bytes()).await?,
-                    _ => bail!("next is unexpected value"),
-                };
+                sitemap_txt.write(xml.as_bytes()).await?;
+                t += 1;
                 gen_map.insert(name, true);
             }
         };
@@ -164,38 +157,30 @@ async fn main() -> anyhow::Result<()> {
                 let url = format!("{base_url_txt}?{}", q.finish());
                 let xml = f.replace("%LOC%", &url.replace('&', "&amp;"));
 
-                match next {
-                    0 => sitemap_txt_jp.write(xml.as_bytes()).await?,
-                    1 => sitemap_txt_jp_2.write(xml.as_bytes()).await?,
-                    _ => bail!("next is unexpected value"),
-                };
+                sitemap_txt.write(xml.as_bytes()).await?;
+                t += 1;
                 gen_map.insert(name_japanese, true);
             }
         };
-
-        next = (next + 1) % 2;
     }
 
     sitemap_vec.write(FOOT.as_bytes()).await?;
     sitemap_vec_jp.write(FOOT.as_bytes()).await?;
-    sitemap_txt.write(FOOT.as_bytes()).await?;
-    sitemap_txt_jp.write(FOOT.as_bytes()).await?;
-
     sitemap_vec_2.write(FOOT.as_bytes()).await?;
     sitemap_vec_jp_2.write(FOOT.as_bytes()).await?;
-    sitemap_txt_2.write(FOOT.as_bytes()).await?;
-    sitemap_txt_jp_2.write(FOOT.as_bytes()).await?;
+    sitemap_txt.write(FOOT.as_bytes()).await?;
 
     sitemap_vec.flush().await?;
     sitemap_vec_jp.flush().await?;
-    sitemap_txt.flush().await?;
-    sitemap_txt_jp.flush().await?;
-
     sitemap_vec_2.flush().await?;
     sitemap_vec_jp_2.flush().await?;
-    sitemap_txt_2.flush().await?;
-    sitemap_txt_jp_2.flush().await?;
+    sitemap_txt.flush().await?;
 
+    info!("v: {v}");
+    info!("vjp: {vjp}");
+    info!("v2: {v2}");
+    info!("vjp2: {vjp2}");
+    info!("t: {t}");
     info!("done");
     Ok(())
 }
