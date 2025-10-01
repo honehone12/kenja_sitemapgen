@@ -40,10 +40,12 @@ impl Generator {
     }
 
     pub async fn new(max: u32, lastmod: &str) -> anyhow::Result<Generator> {
-        let indexer = Indexer::new(lastmod).await?;
         let file_idx = 0;
-        let file = Self::new_file(&format!("sitemap{file_idx}.xml")).await?;
         let format = F.replace("%LASTMOD%", lastmod);
+        let mut indexer = Indexer::new(lastmod).await?;
+        let name = format!("sitemap{file_idx}.xml");
+        let file = Self::new_file(&name).await?;
+        indexer.write(&name).await?;
 
         return Ok(Generator {
             indexer,
