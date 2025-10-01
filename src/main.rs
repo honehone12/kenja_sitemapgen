@@ -1,7 +1,7 @@
 mod generator;
 
 use crate::generator::Generator;
-use anyhow::bail;
+// use anyhow::bail;
 use futures_util::TryStreamExt;
 use mongodb::{
     Client as MongoClient,
@@ -45,36 +45,34 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     let f = F.replace("%LASTMOD%", &env::var("LAST_MOD")?);
-    let base_url_vec = env::var("BASE_URL_VEC")?;
+    // let base_url_vec = env::var("BASE_URL_VEC")?;
     let base_url_txt = env::var("BASE_URL_TXT")?;
 
     let mut generator = Generator::new(1000).await?;
     let mut gen_map = HashMap::new();
-    let mut next = 0;
     for doc in src_list {
         if doc.item_type == 0 || doc.item_type >= 3 {
             continue;
         }
 
-        let item_type = match doc.item_type {
-            1 => "anime",
-            2 => "character",
-            _ => bail!("invalid item type {}", doc.item_type),
-        };
+        // let item_type = match doc.item_type {
+        //     1 => "anime",
+        //     2 => "character",
+        //     _ => bail!("invalid item type {}", doc.item_type),
+        // };
 
-        if !gen_map.contains_key(&doc.id.to_hex()) {
-            let mut q = form_urlencoded::Serializer::new(String::new());
-            q.append_pair("item-type", item_type);
-            let url = format!("{base_url_vec}/{}?{}", doc.id, q.finish());
-            let url_jp = format!("{url}&lang=ja");
-            let xml = f.replace("%LOC%", &url.replace('&', "&amp;"));
-            let xml_jp = f.replace("%LOC%", &url_jp.replace('&', "&amp;"));
+        // if !gen_map.contains_key(&doc.id.to_hex()) {
+        //     let mut q = form_urlencoded::Serializer::new(String::new());
+        //     q.append_pair("item-type", item_type);
+        //     let url = format!("{base_url_vec}/{}?{}", doc.id, q.finish());
+        //     let url_jp = format!("{url}&lang=ja");
+        //     let xml = f.replace("%LOC%", &url.replace('&', "&amp;"));
+        //     let xml_jp = f.replace("%LOC%", &url_jp.replace('&', "&amp;"));
 
-            generator.write(xml).await?;
-            generator.write(xml_jp).await?;
-            gen_map.insert(doc.id.to_hex(), true);
-            next = (next + 1) % 2;
-        }
+        //     generator.write(xml).await?;
+        //     generator.write(xml_jp).await?;
+        //     gen_map.insert(doc.id.to_hex(), true);
+        // }
 
         if doc.item_type == 2 {
             continue;
