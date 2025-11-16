@@ -2,7 +2,6 @@ mod generator;
 mod indexer;
 
 use crate::generator::Generator;
-use anyhow::bail;
 use futures_util::TryStreamExt;
 use mongodb::{
     Client as MongoClient,
@@ -39,33 +38,12 @@ async fn main() -> anyhow::Result<()> {
         .try_collect::<Vec<FlatDocument>>()
         .await?;
 
-    let base_url_vec = env::var("BASE_URL_VEC")?;
     let base_url_txt = env::var("BASE_URL_TXT")?;
 
     let mut generator = Generator::new(1000, &env::var("LAST_MOD")?).await?;
     let mut gen_map = HashMap::new();
     for doc in src_list {
-        if doc.item_type == 0 || doc.item_type >= 3 {
-            continue;
-        }
-
-        if !gen_map.contains_key(&doc.id.to_hex()) {
-            let mut q = form_urlencoded::Serializer::new(String::new());
-            let item_type = match doc.item_type {
-                1 => "anime",
-                2 => "character",
-                _ => bail!("invalid item type {}", doc.item_type),
-            };
-            q.append_pair("item-type", item_type);
-            let url = format!("{base_url_vec}/{}?{}", doc.id, q.finish());
-            let url_jp = format!("{url}&lang=ja");
-
-            generator.write(url).await?;
-            generator.write(url_jp).await?;
-            gen_map.insert(doc.id.to_hex(), true);
-        }
-
-        if doc.item_type == 2 {
+        if doc.item_type != 1 {
             continue;
         }
 
