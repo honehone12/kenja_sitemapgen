@@ -1,7 +1,13 @@
-mod generator;
-mod indexer;
+mod sitemap {
+    pub mod generator;
+    pub mod indexer;
+}
+mod indexnow {
+    pub mod generator;
+    pub mod model;
+}
 
-use crate::generator::Generator;
+use crate::{indexnow::generator::RequestGenerator, sitemap::generator::SitemapGenerator};
 use futures_util::TryStreamExt;
 use mongodb::{
     Client as MongoClient,
@@ -40,7 +46,15 @@ async fn main() -> anyhow::Result<()> {
 
     let base_url_txt = env::var("BASE_URL_TXT")?;
 
-    let mut generator = Generator::new(1000, &env::var("LAST_MOD")?).await?;
+    let max = 1000;
+    let mut sitemap_gen = SitemapGenerator::new(max, &env::var("LAST_MOD")?).await?;
+    let mut request_gen = RequestGenerator::new(
+        max,
+        &env::var("IN_HOST")?,
+        &env::var("IN_KEY")?,
+        &env::var("IN_KEY_LOCATION")?,
+    );
+
     let mut gen_map = HashMap::new();
     for doc in src_list {
         if doc.item_type != 1 {
@@ -54,7 +68,8 @@ async fn main() -> anyhow::Result<()> {
                     .append_pair("item-type", "all");
                 let url = format!("{base_url_txt}?{}", q.finish());
 
-                generator.write(url).await?;
+                sitemap_gen.write(&url).await?;
+                request_gen.push(&url).await?;
                 gen_map.insert(name, true);
             }
         };
@@ -67,14 +82,16 @@ async fn main() -> anyhow::Result<()> {
                     .append_pair("lang", "ja");
                 let url = format!("{base_url_txt}?{}", q.finish());
 
-                generator.write(url).await?;
+                sitemap_gen.write(&url).await?;
+                request_gen.push(&url).await?;
                 gen_map.insert(name_japanese, true);
             }
         };
     }
 
-    generator.finish().await?;
-    generator.flush().await?;
+    sitemap_gen.finish().await?;
+    sitemap_gen.flush().await?;
+    request_gen.finish().await?;
 
     info!("done");
     Ok(())

@@ -813,6 +813,7 @@ dependencies = [
  "futures-util",
  "mongodb",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

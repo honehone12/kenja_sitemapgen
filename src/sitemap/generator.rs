@@ -3,7 +3,7 @@ use tokio::{
     io::AsyncWriteExt,
 };
 
-use crate::indexer::Indexer;
+use crate::sitemap::indexer::Indexer;
 
 const HEAD: &'static str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">"#;
@@ -18,7 +18,7 @@ const F: &'static str = "
         <lastmod>%LASTMOD%</lastmod>
     </url>";
 
-pub struct Generator {
+pub struct SitemapGenerator {
     indexer: Indexer,
     file_idx: u32,
     file: File,
@@ -27,7 +27,7 @@ pub struct Generator {
     format: String,
 }
 
-impl Generator {
+impl SitemapGenerator {
     async fn new_file(name: &str) -> anyhow::Result<File> {
         let mut file = fs::File::options()
             .create(true)
@@ -39,7 +39,7 @@ impl Generator {
         Ok(file)
     }
 
-    pub async fn new(max: u32, lastmod: &str) -> anyhow::Result<Generator> {
+    pub async fn new(max: u32, lastmod: &str) -> anyhow::Result<Self> {
         let file_idx = 0;
         let format = F.replace("%LASTMOD%", lastmod);
         let mut indexer = Indexer::new(lastmod).await?;
@@ -47,7 +47,7 @@ impl Generator {
         let file = Self::new_file(&name).await?;
         indexer.write(&name).await?;
 
-        return Ok(Generator {
+        return Ok(SitemapGenerator {
             indexer,
             file_idx,
             file,
@@ -57,7 +57,7 @@ impl Generator {
         });
     }
 
-    pub async fn write(&mut self, src: String) -> anyhow::Result<()> {
+    pub async fn write(&mut self, src: &str) -> anyhow::Result<()> {
         let xml = self.format.replace("%LOC%", &src.replace('&', "&amp;"));
         self.file.write(xml.as_bytes()).await?;
         self.idx += 1;
